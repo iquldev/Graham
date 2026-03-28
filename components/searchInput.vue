@@ -3,13 +3,13 @@
     <form @submit.prevent="handleSubmit" class="relative">
       <input
         type="text"
-        class="in h-12 w-full bg-black/50 rounded-full outline-none px-4 placeholder:text-neutral-600 text-white"
-        placeholder="Search..."
+        class="in h-14 w-full bg-slate-900/90 border border-white/10 rounded-full outline-none px-5 placeholder:text-slate-500 text-white shadow-[0_0_0_1px_rgba(148,163,184,0.08)] transition focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20"
+        placeholder="Enter search query..."
         v-model="query"
       />
       <button
         type="submit"
-        class="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center transition hover:bg-gradient-to-b hover:from-violet-700 hover:to-purple-600 hover:shadow-[0px_0px_12px_0px_rgba(170,0,255,1.00)] cursor-pointer"
+        class="absolute top-1/2 right-3 -translate-y-1/2 w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/20 transition hover:brightness-110 cursor-pointer"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

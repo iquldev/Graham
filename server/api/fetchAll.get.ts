@@ -31,9 +31,9 @@ export default defineEventHandler(async (event) => {
 Return valid JSON only with two fields:
 {
   "quickAnswer": {"title": "short title", "info": "2-3 sentences"},
-  "sites": [{"source": "string", "url": "valid URL or #", "title": "string", "description": "4-6 sentences summary"}]
+  "sites": [{"title": "string", "description": "4-6 sentences summary"}]
 }
-Answer in the same language as the query. No AI mentions, no markdown, no extra text.`
+Answer in the same language as the query. No sources, no URLs, no links, no AI mentions, no markdown, no extra text.`
         }]
       }]
     });
@@ -44,20 +44,36 @@ Answer in the same language as the query. No AI mentions, no markdown, no extra 
 
     const jsonResponse = JSON.parse(text);
 
+    const quickAnswer = jsonResponse.quickAnswer;
+    const sites = Array.isArray(jsonResponse.sites)
+      ? jsonResponse.sites
+          .map((site) => ({
+            title:
+              typeof site.title === "string" && site.title.trim()
+                ? site.title.trim()
+                : "",
+            description:
+              typeof site.description === "string"
+                ? site.description.trim()
+                : "",
+          }))
+          .filter((site) => site.title && site.description)
+      : [];
+
     if (
-      !jsonResponse.quickAnswer ||
-      typeof jsonResponse.quickAnswer.title !== "string" ||
-      typeof jsonResponse.quickAnswer.info !== "string" ||
-      !Array.isArray(jsonResponse.sites)
+      !quickAnswer ||
+      typeof quickAnswer.title !== "string" ||
+      typeof quickAnswer.info !== "string"
     ) {
       throw new Error("Invalid JSON structure from AI");
     }
 
-    await useStorage().setItem(cacheKey, jsonResponse, { ttl: 86400 });
+    const result = { quickAnswer: { title: quickAnswer.title.trim(), info: quickAnswer.info.trim() }, sites };
+    await useStorage().setItem(cacheKey, result, { ttl: 86400 });
 
     return {
       success: true,
-      data: jsonResponse,
+      data: result,
     };
   } catch (error: any) {
     console.error("API Error:", error);
@@ -67,7 +83,7 @@ Answer in the same language as the query. No AI mentions, no markdown, no extra 
         success: true,
         isDemo: true,
         data: {
-          quickAnswer: { title: "Demo Mode", info: "Лимиты API исчерпаны. Попробуйте через пару минут!" },
+          quickAnswer: { title: "Demo Mode", info: "API limits have been reached. Please try again in a few minutes." },
           sites: []
         }
       };
