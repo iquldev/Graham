@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const client = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export default defineEventHandler(async (event) => {
   try {
@@ -19,23 +19,26 @@ export default defineEventHandler(async (event) => {
       return { success: true, data: cached, cached: true };
     }
 
-    const model = ai.getGenerativeModel({
+    const response = await client.models.generateContent({
       model: "gemini-2.5-flash-lite",
-      generationConfig: {
+      config: {
         responseMimeType: "application/json",
       },
-    });
-
-    const prompt = `You are Graham, a search engine. Query: ${query}.
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `You are Graham, a search engine. Query: ${query}.
 Return valid JSON only with two fields:
 {
   "quickAnswer": {"title": "short title", "info": "2-3 sentences"},
   "sites": [{"source": "string", "url": "valid URL or #", "title": "string", "description": "4-6 sentences summary"}]
 }
-Answer in the same language as the query. No AI mentions, no markdown, no extra text.`;
+Answer in the same language as the query. No AI mentions, no markdown, no extra text.`
+        }]
+      }]
+    });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    const text = response.text;
 
     if (!text) throw new Error("Empty AI response");
 
@@ -58,8 +61,20 @@ Answer in the same language as the query. No AI mentions, no markdown, no extra 
     };
   } catch (error: any) {
     console.error("API Error:", error);
+
+    if (error.status === 429 || error.message?.includes("quota")) {
+      return {
+        success: true,
+        isDemo: true,
+        data: {
+          quickAnswer: { title: "Demo Mode", info: "Лимиты API исчерпаны. Попробуйте через пару минут!" },
+          sites: []
+        }
+      };
+    }
+
     throw createError({
-      statusCode: error.statusCode || 500,
+      statusCode: error.status || 500,
       message: error.message || "Internal server error",
     });
   }
