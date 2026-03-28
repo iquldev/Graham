@@ -7,61 +7,51 @@
       </div>
 
       <div class="flex flex-col gap-4">
-        <searchInput v-model="searchQuery" @search="handleSearch"></searchInput>
+        <searchInput v-model="searchQuery" @search="handleSearch" />
 
-        <div
-          v-if="isLoading"
-          class="text-violet-300 px-6 py-4 bg-slate-900/80 rounded-3xl"
-        >
+        <div v-if="isLoading" class="text-violet-300 px-6 py-4 bg-slate-900/80 rounded-3xl">
           Loading...
         </div>
 
-        <motion.div
-          v-else-if="quickAnswer"
-          class="flex flex-col gap-3 rounded-3xl border border-violet-500/20 bg-violet-950/80 px-6 py-6"
-          :initial="{ opacity: 0, y: 20 }"
-          :animate="{ opacity: 1, y: 0 }"
-          :transition="{ duration: 1, ease: 'easeOut' }"
-        >
-          <p class="text-violet-300 text-sm uppercase tracking-[0.24em]">Quick answer</p>
-          <div class="flex flex-col gap-2">
-            <h1 class="text-white text-3xl">{{ quickAnswer.title }}</h1>
-            <p class="text-slate-400 text-lg leading-8">{{ quickAnswer.info }}</p>
-          </div>
-        </motion.div>
-
-        <div
-          v-else-if="searchQuery"
-          class="text-slate-400 px-6 py-4 bg-slate-900/80 rounded-3xl"
-        >
-          Nothing found
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <div v-if="sites.length > 0" class="flex flex-col gap-4" v-auto-animate>
+        <template v-else>
           <div
-            v-for="(site, index) in sites"
-            :key="site.title + index"
-            class="flex flex-col gap-3 rounded-3xl border border-white/10 bg-slate-900/80 px-6 py-6"
-            :initial="{ opacity: 0, y: 20 }"
-            :animate="{ opacity: 1, y: 0 }"
-            :transition="{ duration: 1, ease: 'easeOut' }"
+            v-if="quickAnswer"
+            class="flex flex-col gap-3 rounded-3xl border border-violet-500/20 bg-violet-950/80 px-6 py-6"
           >
-            <div class="text-xs uppercase tracking-[0.3em] text-violet-300">Information/div>
+            <p class="text-violet-300 text-sm uppercase tracking-[0.24em]">Quick answer</p>
             <div class="flex flex-col gap-2">
-              <h1 class="text-white text-2xl">{{ site.title }}</h1>
-              <p class="text-slate-400 text-lg leading-7">{{ site.description }}</p>
+              <h1 class="text-white text-3xl">{{ quickAnswer.title }}</h1>
+              <p class="text-slate-400 text-lg leading-8">{{ quickAnswer.info }}</p>
             </div>
           </div>
-        </div>
 
-        <div
-          v-else-if="searchQuery && !isLoading"
-          class="text-slate-400 px-6 py-4 bg-slate-900/80 rounded-3xl"
-        >
-          Unable to retrieve data
-        </div>
+          <div v-if="sites.length > 0" class="flex flex-col gap-4">
+            <div
+              v-for="(site, index) in sites"
+              :key="index"
+              class="flex flex-col gap-3 rounded-3xl border border-white/10 bg-slate-900/80 px-6 py-6"
+            >
+              <div class="text-xs uppercase tracking-[0.3em] text-violet-300">Information</div>
+              <div class="flex flex-col gap-2">
+                <h1 class="text-white text-2xl">
+                  <a v-if="site.url && site.url !== '#'" :href="site.url" target="_blank" class="hover:text-violet-400 transition-colors">
+                    {{ site.title }}
+                  </a>
+                  <span v-else>{{ site.title }}</span>
+                </h1>
+                <p class="text-slate-400 text-lg leading-7">{{ site.description }}</p>
+                <span v-if="site.source" class="text-xs text-slate-500 italic">Source: {{ site.source }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else-if="searchQuery && !isLoading && !quickAnswer"
+            class="text-slate-400 px-6 py-4 bg-slate-900/80 rounded-3xl"
+          >
+            Nothing found or unable to retrieve data
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -70,7 +60,6 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { motion } from "motion-v";
 
 const route = useRoute();
 const router = useRouter();
@@ -80,9 +69,9 @@ const quickAnswer = ref(null);
 const sites = ref([]);
 const isLoading = ref(false);
 
-const handleSearch = async (query) => {
+const handleSearch = (query) => {
   if (!query) return;
-  await fetchAll(query);
+  router.push({ query: { query } });
 };
 
 const fetchAll = async (query) => {
@@ -90,23 +79,19 @@ const fetchAll = async (query) => {
 
   isLoading.value = true;
   try {
-    const response = await $fetch(
-      `/api/fetchAll?query=${encodeURIComponent(query)}`,
-      {
-        method: "GET",
-      }
-    );
+    const response = await $fetch("/api/fetchAll", {
+      params: { query }
+    });
 
     if (response?.success && response?.data) {
       quickAnswer.value = response.data.quickAnswer || null;
-      sites.value = Array.isArray(response.data.sites)
-        ? response.data.sites
-        : [];
+      sites.value = Array.isArray(response.data.sites) ? response.data.sites : [];
     } else {
       quickAnswer.value = null;
       sites.value = [];
     }
   } catch (error) {
+    console.error("Fetch error:", error);
     quickAnswer.value = null;
     sites.value = [];
   } finally {
@@ -127,14 +112,6 @@ watch(
   }
 );
 
-watch(searchQuery, (newValue) => {
-  if (newValue !== route.query.query) {
-    router.replace({
-      query: newValue ? { query: newValue } : {},
-    });
-  }
-});
-
 onMounted(() => {
   if (searchQuery.value) {
     fetchAll(searchQuery.value);
@@ -144,6 +121,6 @@ onMounted(() => {
 
 <style scoped>
 * {
-  font-family: "IBM Plex Mono";
+  font-family: "IBM Plex Mono", monospace;
 }
 </style>
