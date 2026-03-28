@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> The initial state of this project was suboptimal, so I used AI to quickly overhaul the design and backend. I’d recommend focusing on my more polished projects instead.
+
 <div align="center">
   <img src="public/favicon.ico" width="80" alt="Graham logo" />
   <h1>Graham</h1>
