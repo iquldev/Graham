@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { motion } from "motion-v";
 
@@ -80,54 +80,30 @@ const handleSearch = async (query) => {
   await fetchAll(query);
 };
 
-const fetchQuick = async (query) => {
+const fetchAll = async (query) => {
   if (!query) return;
 
+  isLoading.value = true;
   try {
-    isLoading.value = true;
     const response = await $fetch(
-      `/api/fetchQuick?query=${encodeURIComponent(query)}`,
+      `/api/fetchAll?query=${encodeURIComponent(query)}`,
       {
         method: "GET",
       }
     );
 
     if (response?.success && response?.data) {
-      quickAnswer.value = response.data;
+      quickAnswer.value = response.data.quickAnswer || null;
+      sites.value = Array.isArray(response.data.sites)
+        ? response.data.sites
+        : [];
     } else {
       quickAnswer.value = null;
-    }
-  } catch (error) {
-    quickAnswer.value = null;
-  }
-};
-
-const fetchSites = async (query) => {
-  if (!query) return;
-
-  try {
-    const response = await $fetch(
-      `/api/fetchSites?query=${encodeURIComponent(query)}`,
-      {
-        method: "GET",
-      }
-    );
-
-    if (response?.success && Array.isArray(response?.data)) {
-      sites.value = response.data;
-    } else {
       sites.value = [];
     }
   } catch (error) {
+    quickAnswer.value = null;
     sites.value = [];
-  }
-};
-
-const fetchAll = async (query) => {
-  if (!query) return;
-  isLoading.value = true;
-  try {
-    await Promise.all([fetchQuick(query), fetchSites(query)]);
   } finally {
     isLoading.value = false;
   }
